@@ -40,6 +40,12 @@ if __name__ == '__main__':
         required=True,
     )
 
+    parser.add_argument(
+        '--apply',
+        action='store_true',
+        help='Apply changes. Without this flag the script runs as a dry run and makes no API calls.',
+    )
+
     args = parser.parse_args()
     msc = MediaServerClient(args.conf)
     # ping
@@ -48,5 +54,7 @@ if __name__ == '__main__':
     channels_count = len(all_channels)
     for index, channel in enumerate(all_channels):
         oid = channel['oid']
-        print(f'Applying sorting on channel {oid} {index + 1}/{channels_count}')
-        msc.api('/channels/edit/', method='post', data={'oid': oid, 'sorting': args.sorting})
+        prefix = '' if args.apply else '[DRY RUN] '
+        print(f'{prefix}Applying sorting on channel {oid} {index + 1}/{channels_count}')
+        if args.apply:
+            msc.api('/channels/edit/', method='post', data={'oid': oid, 'sorting': args.sorting})

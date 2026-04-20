@@ -20,6 +20,11 @@ if __name__ == '__main__':
         nargs='?',
         type=str,
     )
+    parser.add_argument(
+        '--apply',
+        action='store_true',
+        help='Apply changes. Without this flag the script runs as a dry run and makes no API calls.',
+    )
     args = parser.parse_args()
 
     msc = MediaServerClient(args.conf)
@@ -43,7 +48,9 @@ if __name__ == '__main__':
             external_ref = msc.api('medias/get/', params={'oid': oid, 'full': 'yes'})['info'].get('external_ref')
             if external_ref:
                 if external_ref.startswith(external_ref_prefix) and item['parent_oid'] != target_channel_oid:
-                    print(f'Moving {oid} into {target_channel_oid}')
-                    msc.api('medias/edit/', method='post', data={'oid': oid, 'channel': f'mscid-{target_channel_oid}'})
+                    prefix = '' if args.apply else '[DRY RUN] '
+                    print(f'{prefix}Moving {oid} into {target_channel_oid}')
+                    if args.apply:
+                        msc.api('medias/edit/', method='post', data={'oid': oid, 'channel': f'mscid-{target_channel_oid}'})
         start = response['max_date']
         more = response['more']

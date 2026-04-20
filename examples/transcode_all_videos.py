@@ -16,29 +16,31 @@ import os
 import sys
 
 
-def transcode_all_videos(msc, purge):
+def transcode_all_videos(msc, purge, apply):
     non_transcodable = failed = succeeded = 0
 
     videos = msc.get_catalog(fmt='flat').get('videos', [])
     videos_count = len(videos)
+    prefix = '' if apply else '[DRY RUN] '
     for index, item in enumerate(videos):
-        print(f'// Media {index + 1}/{videos_count}: {item["oid"]}')
+        print(f'{prefix}// Media {index + 1}/{videos_count}: {item["oid"]}')
         try:
             transcoding_params = {'priority': 'low'}
             if purge:
                 transcoding_params['behavior'] = 'delete'
 
-            print(f'Starting transcoding task on {item["oid"]}')
-            msc.api(
-                'tasks/start/',
-                method='post',
-                data=dict(
-                    oid=item['oid'],
-                    task='transcoding',
-                    params=json.dumps(transcoding_params),
-                ),
-                timeout=300,
-            )
+            print(f'{prefix}Starting transcoding task on {item["oid"]}')
+            if apply:
+                msc.api(
+                    'tasks/start/',
+                    method='post',
+                    data=dict(
+                        oid=item['oid'],
+                        task='transcoding',
+                        params=json.dumps(transcoding_params),
+                    ),
+                    timeout=300,
+                )
         except msc.RequestError as e:
             if 'has no usable ressources' in str(e):
                 non_transcodable += 1
@@ -67,8 +69,13 @@ if __name__ == '__main__':
         default=False,
         help='If set, will delete all existing resources; otherwise, only missing transcodings will be generated.',
     )
+    parser.add_argument(
+        '--apply',
+        action='store_true',
+        help='Apply changes. Without this flag the script runs as a dry run and makes no API calls.',
+    )
     args = parser.parse_args()
 
     msc = MediaServerClient(args.conf)
     msc.check_server()
-    transcode_all_videos(msc, args.purge)
+    transcode_all_videos(msc, args.purge, args.apply)
